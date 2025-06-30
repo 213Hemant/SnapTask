@@ -27,12 +27,19 @@ function showToast(message) {
 function createTaskElement(task) {
   const li = document.createElement('li');
   li.dataset.id = task.id;
-  li.className = 'flex items-center justify-between bg-white p-3 rounded shadow';
+  li.className = 'flex flex-col bg-white p-3 rounded shadow';
+
+  const topRow = document.createElement('div');
+  topRow.className = 'flex items-center justify-between';
 
   const left = document.createElement('div');
-  const cb = document.createElement('input');
-  cb.type = 'checkbox'; cb.className = 'toggle-done mr-2'; cb.checked = task.done;
-  left.appendChild(cb);
+  left.className = 'flex items-center';
+
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.className = 'toggle-done mr-2';
+  checkbox.checked = task.done;
+  left.appendChild(checkbox);
 
   const span = document.createElement('span');
   span.textContent = task.text;
@@ -41,11 +48,24 @@ function createTaskElement(task) {
   span.onclick = () => openEditModal(task.id, task.text);
   left.appendChild(span);
 
-  li.appendChild(left);
+  topRow.appendChild(left);
 
   const removeBtn = document.createElement('button');
-  removeBtn.className = 'remove-btn text-red-500'; removeBtn.textContent = '✕';
-  li.appendChild(removeBtn);
+  removeBtn.className = 'remove-btn text-red-500';
+  removeBtn.textContent = '✕';
+  topRow.appendChild(removeBtn);
+
+  li.appendChild(topRow);
+
+  const meta = document.createElement('div');
+  meta.className = 'text-xs text-gray-500 mt-1';
+  if (task.last_modified_by && task.last_modified_by !== task.created_by) {
+    meta.textContent = `Created by ${task.created_by}, last edited by ${task.last_modified_by}`;
+  } else {
+    meta.textContent = `Created by ${task.created_by}`;
+  }
+
+  li.appendChild(meta);
 
   return li;
 }

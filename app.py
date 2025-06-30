@@ -87,7 +87,13 @@ def handle_leave(data):
 def handle_add_task(data):
     room_name, text = data['room'], data['text']
     authorize_room(room_name)
-    task = {'id': next_id[room_name], 'text': text, 'done': False}
+    task = {
+    'id': next_id[room_name],
+    'text': text,
+    'done': False,
+    'created_by': current_user.username,
+    'last_modified_by': current_user.username
+}
     tasks[room_name].append(task)
     next_id[room_name] += 1
     emit('task_added', task, room=room_name)
@@ -114,11 +120,13 @@ def handle_toggle_done(data):
     for t in tasks[room_name]:
         if t['id'] == t_id:
             t['done'] = not t['done']
+            t['last_modified_by'] = current_user.username
             emit('task_toggled', {'id': t_id, 'done': t['done']}, room=room_name)
             state = 'completed' if t['done'] else 'reopened'
-            emit('notification', {'message': f"Task {state}: '{t['text']}'",
-                                  'username': data.get('username')},
-                 room=room_name)
+            emit('notification', {
+                'message': f"Task {state}: '{t['text']}'",
+                'username': current_user.username
+            }, room=room_name)
             break
 
 @socketio.on('edit_task')
@@ -129,11 +137,14 @@ def handle_edit_task(data):
     for t in tasks[room_name]:
         if t['id'] == t_id:
             t['text'] = new_text
+            t['last_modified_by'] = current_user.username
             emit('task_edited', {'id': t_id, 'text': new_text}, room=room_name)
-            emit('notification', {'message': f"Task edited: '{new_text}'",
-                                  'username': data.get('username')},
-                 room=room_name)
-            break
+            emit('notification', {
+                'message': f"Task edited: '{new_text}'",
+                'username': current_user.username
+            }, room=room_name)
+            # break
+
 
 if __name__ == '__main__':
     with app.app_context():
