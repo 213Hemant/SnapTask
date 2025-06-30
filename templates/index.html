@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Collaborative To-Do with Edit Modal</title>
+  <script src="https://cdn.jsdelivr.net/npm/socket.io-client/dist/socket.io.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-6">
+  <div class="max-w-xl mx-auto">
+    <h1 class="text-3xl font-bold mb-4">Collaborative To-Do</h1>
+    <div class="flex mb-4">
+      <input id="roomInput" type="text" placeholder="Room name…" class="border rounded p-2 mr-2" />
+      <button id="joinBtn" class="bg-green-500 text-white px-4 rounded mr-4">Join</button>
+      <input id="taskInput" type="text" placeholder="New task…" class="flex-grow border rounded p-2 mr-2" disabled />
+      <button id="addBtn" class="bg-blue-500 text-white px-4 rounded" disabled>Add</button>
+    </div>
+    <ul id="tasks" class="space-y-2 mb-6">
+      <!-- Room tasks load here -->
+    </ul>
+    <!-- Toast container -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 space-y-2"></div>
+  </div>
+
+  <!-- Edit Modal -->
+  <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+    <div class="bg-white p-6 rounded shadow-lg w-80">
+      <h2 class="text-xl font-semibold mb-4">Edit Task</h2>
+      <input id="editInput" type="text" class="w-full border rounded p-2 mb-4" />
+      <div class="flex justify-end">
+        <button id="cancelEdit" class="mr-2 px-4 py-2">Cancel</button>
+        <button id="saveEdit" class="bg-blue-500 text-white px-4 py-2 rounded">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='main.js') }}"></script>
+</body>
+</html>

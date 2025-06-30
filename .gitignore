@@ -1,0 +1,30 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+env/
+ENV/
+.venv/
+
+# VSCode and PyCharm settings
+.vscode/
+.idea/
+
+# Flask stuff
+instance/
+*.db
+*.sqlite3
+
+# Environment variables
+.env
+
+# Frontend build artifacts (if applicable)
+dist/
+node_modules/
+
+# System files
+.DS_Store
+Thumbs.db
