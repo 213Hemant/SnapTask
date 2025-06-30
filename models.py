@@ -1,7 +1,9 @@
+# models.py
+from datetime import datetime
 from flask_login import UserMixin
 from extensions import db
 
-# Association table for room members
+# Association table stays the same...
 room_members = db.Table(
     'room_members',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
@@ -10,18 +12,50 @@ room_members = db.Table(
 
 class User(UserMixin, db.Model):
     __tablename__ = 'user'
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
+    id            = db.Column(db.Integer, primary_key=True)
+    username      = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
-    # rooms relationship provided by Room.members backref
+    # backref 'rooms' via Room.members
+    # backref 'created_tasks' & 'edited_tasks' via Task relationships below
 
 class Room(db.Model):
     __tablename__ = 'room'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), unique=True, nullable=False)
+    id      = db.Column(db.Integer, primary_key=True)
+    name    = db.Column(db.String(100), unique=True, nullable=False)
     members = db.relationship(
         'User',
         secondary=room_members,
         backref=db.backref('rooms', lazy='dynamic'),
         lazy='dynamic'
     )
+    # NEW: link to tasks
+    tasks   = db.relationship('Task', backref='room', lazy=True, cascade='all, delete')
+
+class Task(db.Model):
+    __tablename__ = 'task'
+    id             = db.Column(db.Integer, primary_key=True)
+    text           = db.Column(db.String(255), nullable=False)
+    done           = db.Column(db.Boolean, default=False)
+
+    room_id        = db.Column(db.Integer, db.ForeignKey('room.id'), nullable=False)
+    creator_id     = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    last_editor_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+
+    created_at     = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at     = db.Column(db.DateTime, default=datetime.utcnow,
+                               onupdate=datetime.utcnow)
+
+    creator        = db.relationship('User', foreign_keys=[creator_id],
+                                     backref=db.backref('created_tasks', lazy=True))
+    last_editor    = db.relationship('User', foreign_keys=[last_editor_id],
+                                     backref=db.backref('edited_tasks', lazy=True))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'text': self.text,
+            'done': self.done,
+            'created_by': self.creator.username,
+            'last_modified_by': (self.last_editor.username
+                                 if self.last_editor else self.creator.username)
+        }
