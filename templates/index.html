@@ -1,24 +1,45 @@
+<!-- templates/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Collaborative To-Do with Edit Modal</title>
+  <title>Collaborative To-Do with Rooms</title>
   <script src="https://cdn.jsdelivr.net/npm/socket.io-client/dist/socket.io.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 p-6">
   <div class="max-w-xl mx-auto">
     <h1 class="text-3xl font-bold mb-4">Collaborative To-Do</h1>
+
+    <!-- Pass current username into JS -->
+    <script>
+      const CURRENT_USER = "{{ current_username }}";
+    </script>
+
+    <!-- Room selector -->
+    <div class="mb-4">
+      <label for="roomSelect" class="block mb-1 font-semibold">My Rooms</label>
+      <div class="flex">
+        <select id="roomSelect" class="border rounded p-2 mr-2 flex-grow">
+          <option value="" selected disabled>Select a room…</option>
+          {% for room in rooms %}
+            <option value="{{ room.name }}">{{ room.name }}</option>
+          {% endfor %}
+        </select>
+        <button id="joinBtn" class="bg-green-500 text-white px-4 rounded">Join</button>
+      </div>
+    </div>
+
+    <!-- Task input (disabled until join) -->
     <div class="flex mb-4">
-      <input id="roomInput" type="text" placeholder="Room name…" class="border rounded p-2 mr-2" />
-      <button id="joinBtn" class="bg-green-500 text-white px-4 rounded mr-4">Join</button>
       <input id="taskInput" type="text" placeholder="New task…" class="flex-grow border rounded p-2 mr-2" disabled />
       <button id="addBtn" class="bg-blue-500 text-white px-4 rounded" disabled>Add</button>
     </div>
-    <ul id="tasks" class="space-y-2 mb-6">
-      <!-- Room tasks load here -->
-    </ul>
+
+    <!-- Task list -->
+    <ul id="tasks" class="space-y-2 mb-6"></ul>
+
     <!-- Toast container -->
     <div id="toastContainer" class="fixed bottom-4 right-4 space-y-2"></div>
   </div>

@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="max-w-xl mx-auto p-6">
+  <h2 class="text-2xl font-bold mb-4">My Rooms</h2>
+  <form method="POST" action="{{ url_for('room.rooms') }}" class="flex mb-6">
+    <input name="name" placeholder="New room name" class="flex-grow border p-2 rounded mr-2" required />
+    <button type="submit" class="bg-indigo-500 text-white px-4 py-2 rounded">Create Room</button>
+  </form>
+  <ul class="space-y-4">
+    {% if rooms %}
+      {% for room in rooms %}
+      <li class="border p-4 rounded bg-white">
+        <div class="flex justify-between items-center">
+          <span class="font-semibold">{{ room.name }}</span>
+          <form method="POST" action="{{ url_for('room.invite', room_id=room.id) }}" class="flex">
+            <input name="username" placeholder="Invite by username" class="border p-1 rounded mr-2" required />
+            <button type="submit" class="bg-blue-400 text-white px-3 py-1 rounded">Invite</button>
+          </form>
+        </div>
+      </li>
+      {% endfor %}
+    {% else %}
+      <li>No rooms yet. Create one above.</li>
+    {% endif %}
+  </ul>
+</div>
+{% endblock %}
