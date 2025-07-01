@@ -3,7 +3,7 @@
 {% block title %}My To‑Do Board{% endblock %}
 
 {% block content %}
-<div class="max-w-xl mx-auto">
+<div class="max-w-xl mx-auto px-4">
   <h1 class="text-3xl font-bold mb-4">Collaborative To‑Do</h1>
 
   <script>
@@ -24,22 +24,26 @@
     </div>
   </div>
 
-  <!-- Task + Due Date inputs (disabled until join) -->
-  <div class="flex mb-2 space-x-2">
+  <!-- Responsive Task + Due Date inputs -->
+  <div class="flex flex-col sm:flex-row mb-2 sm:space-x-2 space-y-2 sm:space-y-0">
     <input
       id="taskInput"
       type="text"
       placeholder="New task…"
-      class="flex-grow border rounded p-2"
+      class="w-full sm:flex-grow border rounded p-2 focus:outline-none focus:ring"
       disabled
     />
     <input
       id="dueDateInput"
       type="date"
-      class="border rounded p-2"
+      class="w-full sm:w-auto border rounded p-2 focus:outline-none focus:ring"
       disabled
     />
-    <button id="addBtn" class="bg-blue-500 text-white px-4 rounded" disabled>
+    <button
+      id="addBtn"
+      class="w-full sm:w-auto bg-blue-500 text-white px-4 py-2 rounded focus:outline-none focus:ring"
+      disabled
+    >
       Add
     </button>
   </div>
@@ -51,37 +55,35 @@
   <ul id="tasks" class="space-y-2 mb-6"></ul>
 
   <!-- Toast container -->
-  <div id="toastContainer" class="fixed bottom-4 right-4 space-y-2"></div>
+  <div id="toastContainer" class="fixed bottom-4 right-4 space-y-2 z-50"></div>
 </div>
 
 <!-- Edit Modal -->
 <div
   id="editModal"
-  class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden"
+  class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50"
 >
-  <div class="bg-white p-6 rounded shadow-lg w-80">
-    <h2 class="text-xl font-semibold mb-4">Edit Task</h2>
+  <div class="bg-white p-6 rounded shadow-lg w-80 space-y-4">
+    <h2 class="text-xl font-semibold mb-2">Edit Task</h2>
     <input
       id="editInput"
       type="text"
-      class="w-full border rounded p-2 mb-2"
+      class="w-full border rounded p-2 focus:outline-none focus:ring"
     />
     <input
       id="editDueDate"
       type="date"
-      class="w-full border rounded p-2 mb-4"
+      class="w-full border rounded p-2 focus:outline-none focus:ring"
     />
-    <div class="flex justify-end">
-      <button id="cancelEdit" class="mr-2 px-4 py-2">Cancel</button>
-      <button id="saveEdit" class="bg-blue-500 text-white px-4 py-2 rounded">
-        Save
-      </button>
+    <div class="flex justify-end space-x-2">
+      <button id="cancelEdit" class="px-3 py-1 bg-gray-300 rounded focus:outline-none focus:ring">Cancel</button>
+      <button id="saveEdit" class="px-3 py-1 bg-blue-500 text-white rounded focus:outline-none focus:ring">Save</button>
     </div>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-  <script src="https://cdn.jsdelivr.net/npm/socket.io-client/dist/socket.io.min.js"></script>
-  <script src="{{ url_for('static', filename='main.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/socket.io-client/dist/socket.io.min.js"></script>
+<script src="{{ url_for('static', filename='main.js') }}"></script>
 {% endblock %}

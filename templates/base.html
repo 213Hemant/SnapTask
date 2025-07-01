@@ -4,44 +4,65 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{% block title %}Collaborative To-Do{% endblock %}</title>
+  <title>{% block title %}Collaborative To‑Do{% endblock %}</title>
   <script src="https://cdn.jsdelivr.net/npm/socket.io-client/dist/socket.io.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Animations & Transitions -->
+  <style>
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+      animation: fadeIn 0.3s ease-out;
+    }
+    .animate-fade-in-out {
+      transition: opacity 0.7s ease;
+    }
+  </style>
 </head>
 
 <body class="bg-gray-100 min-h-screen flex flex-col">
+
+  <!-- Skip link for keyboard users -->
+  <a href="#main-content" class="sr-only focus:not-sr-only p-2 bg-blue-600 text-white">
+    Skip to content
+  </a>
+
   <!-- Navbar -->
-  <nav class="bg-white shadow mb-6">
+  <nav role="banner" class="bg-white shadow mb-6">
     <div class="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
       <a href="{{ url_for('landing') }}" class="text-xl font-bold">To‑Do App</a>
       <div class="space-x-4">
         {% if current_user.is_authenticated %}
-        <a href="{{ url_for('index') }}" class="hover:underline">Home</a>
-        <a href="{{ url_for('room.rooms') }}" class="hover:underline">My Rooms</a>
-        <a href="{{ url_for('auth.logout') }}" class="text-red-500 hover:underline">Logout</a>
+          <a href="{{ url_for('index') }}" class="hover:underline focus:outline-none focus:ring">Home</a>
+          <a href="{{ url_for('room.rooms') }}" class="hover:underline focus:outline-none focus:ring">My Rooms</a>
+          <a href="{{ url_for('auth.logout') }}" class="text-red-500 hover:underline focus:outline-none focus:ring">Logout</a>
         {% else %}
-        <a href="{{ url_for('auth.login') }}" class="hover:underline">Login</a>
-        <a href="{{ url_for('auth.signup') }}" class="hover:underline">Sign Up</a>
+          <a href="{{ url_for('auth.login') }}" class="hover:underline focus:outline-none focus:ring">Login</a>
+          <a href="{{ url_for('auth.signup') }}" class="hover:underline focus:outline-none focus:ring">Sign Up</a>
         {% endif %}
       </div>
     </div>
   </nav>
 
   <!-- Main Content -->
-  <main class="flex-grow">
+  <main id="main-content" role="main" class="flex-grow">
     {% block content %}{% endblock %}
   </main>
 
   <!-- Footer -->
-  <footer class="bg-white shadow mt-6">
+  <footer role="contentinfo" class="bg-white shadow mt-6">
     <div class="max-w-4xl mx-auto px-4 py-3 text-center text-sm text-gray-500">
       &copy; {{ current_year }} Collaborative To‑Do
     </div>
   </footer>
 
-
   <!-- Global Scripts -->
-  {% block scripts %}{% endblock %}
+  {% block scripts %}
+  
+  {% endblock %}
 </body>
 
 </html>

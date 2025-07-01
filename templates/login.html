@@ -3,26 +3,34 @@
 {% block title %}Login{% endblock %}
 
 {% block content %}
-<div class="flex items-center justify-center h-screen">
-  <form method="POST" class="bg-white shadow-md rounded px-8 pt-6 pb-8 w-full max-w-sm">
-    <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Login</h2>
-    <div class="mb-4">
-      <label for="username" class="block text-gray-700 text-sm font-bold mb-2">Username</label>
+<div class="flex items-center justify-center min-h-screen p-4">
+  <form method="POST"
+        class="bg-white shadow-md rounded px-8 pt-6 pb-8 w-full max-w-sm space-y-6">
+    <h2 class="text-2xl font-bold mb-4 text-center text-gray-800">Login</h2>
+
+    <div>
+      <label for="username" class="block text-gray-700 text-sm font-bold mb-1">
+        Username
+      </label>
       <input name="username" id="username" placeholder="Username" required
-        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"/>
+             class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring" />
     </div>
-    <div class="mb-6">
-      <label for="password" class="block text-gray-700 text-sm font-bold mb-2">Password</label>
+
+    <div>
+      <label for="password" class="block text-gray-700 text-sm font-bold mb-1">
+        Password
+      </label>
       <input name="password" type="password" id="password" placeholder="Password" required
-        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"/>
+             class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring" />
     </div>
+
     <div class="flex items-center justify-between">
       <button type="submit"
-        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+              class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring">
         Login
       </button>
       <a href="{{ url_for('auth.signup') }}"
-        class="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800">
+         class="text-sm font-bold text-blue-500 hover:text-blue-800">
         Sign Up
       </a>
     </div>

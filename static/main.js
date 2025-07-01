@@ -23,17 +23,30 @@ let typingTimeout = null;
 // Utility: show a temporary toast
 function showToast(message) {
   const div = document.createElement('div');
-  div.className = 'bg-white p-3 rounded shadow-lg animate-fade-in-out';
+  div.className = 'bg-white p-3 rounded shadow-lg animate-fade-in-out transition-opacity duration-700 opacity-100';
   div.textContent = message;
   toastContainer.appendChild(div);
+  setTimeout(() => div.classList.add('opacity-0'), 2500);
   setTimeout(() => div.remove(), 3000);
+}
+
+// Get color class based on due date
+function getDueDateColor(dueDate) {
+  if (!dueDate) return '';
+  const today = new Date();
+  const due = new Date(dueDate);
+  today.setHours(0, 0, 0, 0);
+  due.setHours(0, 0, 0, 0);
+  if (due < today) return 'bg-red-100 border-l-4 border-red-400';
+  if (due.getTime() === today.getTime()) return 'bg-yellow-100 border-l-4 border-yellow-400';
+  return 'bg-green-100 border-l-4 border-green-400';
 }
 
 // Build a task <li> element with due-date and author meta
 function createTaskElement(task) {
   const li = document.createElement('li');
   li.dataset.id = task.id;
-  li.className = 'flex flex-col bg-white p-3 rounded shadow';
+  li.className = `flex flex-col p-3 rounded shadow mb-2 animate-fade-in ${getDueDateColor(task.due_date)}`;
 
   // Top row: checkbox, text, remove button
   const topRow = document.createElement('div');
@@ -88,14 +101,18 @@ function createTaskElement(task) {
 // Open the edit modal and populate fields
 function openEditModal(id, text, dueDate) {
   editingTaskId = id;
-  editInput.value = text;
-  editDueDate.value = dueDate || '';
+  editInput.value     = text;
+  editDueDate.value   = dueDate || '';
   editModal.classList.remove('hidden');
+  editInput.focus();
 }
 
 // Modal button handlers
-cancelEdit.onclick = () => editModal.classList.add('hidden');
-saveEdit.onclick   = () => {
+cancelEdit.onclick = () => {
+  editModal.classList.add('hidden');
+  taskInput.focus();
+};
+saveEdit.onclick = () => {
   const newText = editInput.value.trim();
   const newDue  = editDueDate.value || null;
   if (!newText) return;
@@ -107,7 +124,26 @@ saveEdit.onclick   = () => {
     username: CURRENT_USER
   });
   editModal.classList.add('hidden');
+  taskInput.focus();
 };
+
+// Allow Enter key to add a task
+[taskInput, dueDateInput].forEach(el =>
+  el.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addBtn.click();
+    }
+  })
+);
+
+// Close modal on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !editModal.classList.contains('hidden')) {
+    editModal.classList.add('hidden');
+    taskInput.focus();
+  }
+});
 
 // Emit typing / stop_typing events
 function emitTyping() {
@@ -161,22 +197,31 @@ socket.on('room_data', ({ tasks }) => {
     .forEach(t => tasksList.appendChild(createTaskElement(t)));
 });
 
-// Task CRUD events
-socket.on('task_added',    task => tasksList.appendChild(createTaskElement(task)));
-socket.on('task_removed',  ({ id }) => {
+// Task added
+socket.on('task_added', task => {
+  const el = createTaskElement(task);
+  tasksList.appendChild(el);
+});
+
+// Task removed
+socket.on('task_removed', ({ id }) => {
   const el = tasksList.querySelector(`li[data-id='${id}']`);
   if (el) el.remove();
 });
-socket.on('task_toggled',  ({ id, done }) => {
+
+// Task toggled
+socket.on('task_toggled', ({ id, done }) => {
   const el = tasksList.querySelector(`li[data-id='${id}']`);
   if (!el) return;
-  const cb   = el.querySelector('.toggle-done');
+  const cb = el.querySelector('.toggle-done');
   const span = el.querySelector('.task-text');
   cb.checked = done;
   span.classList.toggle('line-through', done);
   span.classList.toggle('text-gray-500', done);
 });
-socket.on('task_edited',   ({ id, text, due_date }) => {
+
+// Task edited
+socket.on('task_edited', ({ id, text, due_date }) => {
   const el = tasksList.querySelector(`li[data-id='${id}']`);
   if (!el) return;
   el.querySelector('.task-text').textContent = text;
@@ -192,6 +237,9 @@ socket.on('task_edited',   ({ id, text, due_date }) => {
   } else if (dueEl) {
     dueEl.remove();
   }
+
+  // Recalculate and apply due-date color
+  el.className = `flex flex-col p-3 rounded shadow mb-2 animate-fade-in ${getDueDateColor(due_date)}`;
 });
 
 // Notifications
@@ -205,6 +253,19 @@ socket.on('user_typing', ({ username }) => {
 });
 socket.on('user_stop_typing', () => {
   typingIndicator.textContent = '';
+});
+
+// Delegate remove & toggle events
+tasksList.addEventListener('click', e => {
+  if (!currentRoom) return;
+
+  if (e.target.matches('.remove-btn')) {
+    const id = Number(e.target.closest('li').dataset.id);
+    socket.emit('remove_task', { room: currentRoom, id, username: CURRENT_USER });
+  } else if (e.target.matches('.toggle-done')) {
+    const id = Number(e.target.closest('li').dataset.id);
+    socket.emit('toggle_done', { room: currentRoom, id, username: CURRENT_USER });
+  }
 });
 
 // Attach typing listeners
