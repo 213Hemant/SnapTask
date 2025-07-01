@@ -12,11 +12,10 @@ from authorize import authorize_room
 from auth import auth_bp
 from room import room_bp
 
-# Load environment
 load_dotenv()
 
 app = Flask(__name__)
-app.config['SECRET_KEY']            = os.getenv('SECRET_KEY', 'secret!')
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'secret!')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 
 db.init_app(app)
@@ -46,17 +45,19 @@ def index():
                            rooms=rooms,
                            current_username=current_user.username)
 
-# —— Socket.IO handlers ——
-
 @socketio.on('join_room')
 @login_required
 def handle_join(data):
     room_name = data['room']
-    room = authorize_room(room_name)              # get Room instance
+    room = authorize_room(room_name)
     join_room(room_name)
-    # Load persisted tasks
-    tasks = [t.to_dict() for t in room.tasks]
-    emit('room_data', {'tasks': tasks}, room=request.sid)
+
+    # Always load from DB
+    tasks_list = [t.to_dict() for t in room.tasks]
+
+    # Sort by due_date: earliest first, nulls last
+    tasks_list.sort(key=lambda x: (x['due_date'] is None, x['due_date']))
+    emit('room_data', {'tasks': tasks_list}, room=request.sid)
     emit('notification', {
         'message': f"{current_user.username} joined room '{room_name}'",
         'username': current_user.username
@@ -65,19 +66,24 @@ def handle_join(data):
 @socketio.on('add_task')
 @login_required
 def handle_add_task(data):
-    room_name, text = data['room'], data['text']
+    room_name = data['room']
+    text = data['text']
+    due_iso = data.get('due_date')
     room = authorize_room(room_name)
-    # Persist
+
+    due = datetime.fromisoformat(due_iso).date() if due_iso else None
+
     new_task = Task(
         text=text,
         done=False,
+        due_date=due,
         room=room,
         creator=current_user,
         last_editor=current_user
     )
     db.session.add(new_task)
     db.session.commit()
-    # Broadcast
+
     emit('task_added', new_task.to_dict(), room=room_name)
     emit('notification', {
         'message': f"{current_user.username} added: '{text}'",
@@ -117,13 +123,24 @@ def handle_toggle_done(data):
 @socketio.on('edit_task')
 @login_required
 def handle_edit_task(data):
-    room_name, t_id, new_text = data['room'], data['id'], data['text']
+    room_name = data['room']
+    t_id = data['id']
+    new_text = data['text']
+    due_iso = data.get('due_date')
     authorize_room(room_name)
+
     task = Task.query.get_or_404(t_id)
     task.text = new_text
+    task.due_date = (datetime.fromisoformat(due_iso).date()
+                     if due_iso else None)
     task.last_editor = current_user
     db.session.commit()
-    emit('task_edited', {'id': t_id, 'text': new_text}, room=room_name)
+
+    emit('task_edited', {
+        'id': t_id,
+        'text': new_text,
+        'due_date': task.due_date.isoformat() if task.due_date else None
+    }, room=room_name)
     emit('notification', {
         'message': f"{current_user.username} edited: '{new_text}'",
         'username': current_user.username

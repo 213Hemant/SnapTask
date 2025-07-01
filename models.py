@@ -37,12 +37,16 @@ class Task(db.Model):
     text           = db.Column(db.String(255), nullable=False)
     done           = db.Column(db.Boolean, default=False)
 
+    # --- new due_date field ---
+    due_date       = db.Column(db.Date, nullable=True)
+
     room_id        = db.Column(db.Integer, db.ForeignKey('room.id'), nullable=False)
     creator_id     = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     last_editor_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
     created_at     = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at     = db.Column(db.DateTime, default=datetime.utcnow,
+    updated_at     = db.Column(db.DateTime,
+                               default=datetime.utcnow,
                                onupdate=datetime.utcnow)
 
     creator        = db.relationship('User', foreign_keys=[creator_id],
@@ -55,6 +59,7 @@ class Task(db.Model):
             'id': self.id,
             'text': self.text,
             'done': self.done,
+            'due_date': self.due_date.isoformat() if self.due_date else None,
             'created_by': self.creator.username,
             'last_modified_by': (self.last_editor.username
                                  if self.last_editor else self.creator.username)

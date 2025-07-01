@@ -1,18 +1,19 @@
 <!-- templates/index.html -->
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Collaborative To-Do with Rooms</title>
+  <title>Collaborative To-Do with Due Dates</title>
   <script src="https://cdn.jsdelivr.net/npm/socket.io-client/dist/socket.io.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
+
 <body class="bg-gray-100 p-6">
   <div class="max-w-xl mx-auto">
     <h1 class="text-3xl font-bold mb-4">Collaborative To-Do</h1>
 
-    <!-- Pass current username into JS -->
     <script>
       const CURRENT_USER = "{{ current_username }}";
     </script>
@@ -24,7 +25,7 @@
         <select id="roomSelect" class="border rounded p-2 mr-2 flex-grow">
           <option value="" selected disabled>Select a room…</option>
           {% for room in rooms %}
-            <option value="{{ room.name }}">{{ room.name }}</option>
+          <option value="{{ room.name }}">{{ room.name }}</option>
           {% endfor %}
         </select>
         <button id="joinBtn" class="bg-green-500 text-white px-4 rounded">Join</button>
@@ -32,23 +33,33 @@
     </div>
 
     <!-- Task input (disabled until join) -->
-    <div class="flex mb-4">
-      <input id="taskInput" type="text" placeholder="New task…" class="flex-grow border rounded p-2 mr-2" disabled />
-      <button id="addBtn" class="bg-blue-500 text-white px-4 rounded" disabled>Add</button>
+    <!-- Task + Due Date inputs -->
+    <div class="flex mb-4 space-x-2">
+      <input id="taskInput" type="text" placeholder="New task…" class="flex-grow border rounded p-2" disabled />
+      <input id="dueDateInput" type="date" class="border rounded p-2" disabled />
+      <button id="addBtn" class="bg-blue-500 text-white px-4 rounded" disabled>
+        Add
+      </button>
     </div>
 
-    <!-- Task list -->
     <ul id="tasks" class="space-y-2 mb-6"></ul>
-
-    <!-- Toast container -->
     <div id="toastContainer" class="fixed bottom-4 right-4 space-y-2"></div>
+  </div>
+
+  <!-- Task list -->
+  <ul id="tasks" class="space-y-2 mb-6"></ul>
+
+  <!-- Toast container -->
+  <div id="toastContainer" class="fixed bottom-4 right-4 space-y-2"></div>
   </div>
 
   <!-- Edit Modal -->
   <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
     <div class="bg-white p-6 rounded shadow-lg w-80">
       <h2 class="text-xl font-semibold mb-4">Edit Task</h2>
-      <input id="editInput" type="text" class="w-full border rounded p-2 mb-4" />
+      <!-- <input id="editInput" type="text" class="w-full border rounded p-2 mb-4" /> -->
+      <input id="editInput" type="text" class="w-full border rounded p-2 mb-2" />
+      <input id="editDueDate" type="date" class="w-full border rounded p-2 mb-4" />
       <div class="flex justify-end">
         <button id="cancelEdit" class="mr-2 px-4 py-2">Cancel</button>
         <button id="saveEdit" class="bg-blue-500 text-white px-4 py-2 rounded">Save</button>
@@ -58,4 +69,5 @@
 
   <script src="{{ url_for('static', filename='main.js') }}"></script>
 </body>
+
 </html>
