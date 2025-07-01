@@ -1,6 +1,7 @@
 # app.py
+
 import os
-from flask import Flask, render_template, request
+from flask import Flask, redirect, render_template, url_for, request
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_login import LoginManager, login_required, current_user
 from datetime import datetime, timezone
@@ -18,32 +19,53 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'secret!')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 
+# Initialize extensions
 db.init_app(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'auth.login'
 socketio = SocketIO(app)
 
+# User loader
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+# Blueprints
 app.register_blueprint(auth_bp)
 app.register_blueprint(room_bp)
 
+# Context processor for footer
 @app.context_processor
 def inject_current_year():
     return {'current_year': datetime.now(timezone.utc).year}
 
+# Landing page (unauthenticated)
+@app.route('/welcome')
+def landing():
+    return render_template('landing.html')
+
+# Root redirect: unauthenticated → landing; authenticated → index
 @app.route('/')
+def root():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    return redirect(url_for('landing'))
+
+# Main to-do board
+@app.route('/index')
 @login_required
 def index():
     try:
         rooms = current_user.rooms.all()
-    except:
+    except AttributeError:
         rooms = current_user.rooms
-    return render_template('index.html',
-                           rooms=rooms,
-                           current_username=current_user.username)
+    return render_template(
+        'index.html',
+        rooms=rooms,
+        current_username=current_user.username
+    )
+
+# Socket.IO event handlers
 
 @socketio.on('join_room')
 @login_required
@@ -51,11 +73,7 @@ def handle_join(data):
     room_name = data['room']
     room = authorize_room(room_name)
     join_room(room_name)
-
-    # Always load from DB
     tasks_list = [t.to_dict() for t in room.tasks]
-
-    # Sort by due_date: earliest first, nulls last
     tasks_list.sort(key=lambda x: (x['due_date'] is None, x['due_date']))
     emit('room_data', {'tasks': tasks_list}, room=request.sid)
     emit('notification', {
@@ -70,7 +88,6 @@ def handle_add_task(data):
     text = data['text']
     due_iso = data.get('due_date')
     room = authorize_room(room_name)
-
     due = datetime.fromisoformat(due_iso).date() if due_iso else None
 
     new_task = Task(
