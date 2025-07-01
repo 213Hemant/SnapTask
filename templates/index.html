@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
 
-{% block title %}My To‑Do Board{% endblock %}
+{% block title %}Dashboard — SyncBoard{% endblock %}
 
 {% block content %}
-<div class="max-w-xl mx-auto px-4">
-  <h1 class="text-3xl font-bold mb-4">Collaborative To‑Do</h1>
+<div class="max-w-xl mx-auto px-4 pt-10 pb-16">
+  <h1 class="text-3xl font-bold mb-4">Your Task Hub</h1>
 
   <script>
     const CURRENT_USER = "{{ current_username }}";
@@ -12,7 +12,7 @@
 
   <!-- Room selector -->
   <div class="mb-4">
-    <label for="roomSelect" class="block mb-1 font-semibold">My Rooms</label>
+    <label for="roomSelect" class="block mb-1 font-semibold">Choose a Workspace</label>
     <div class="flex">
       <select id="roomSelect" class="border rounded p-2 mr-2 flex-grow">
         <option value="" selected disabled>Select a room…</option>
@@ -20,16 +20,16 @@
           <option value="{{ room.name }}">{{ room.name }}</option>
         {% endfor %}
       </select>
-      <button id="joinBtn" class="bg-green-500 text-white px-4 rounded">Join</button>
+      <button id="joinBtn" class="bg-green-500 text-white px-4 rounded">Enter</button>
     </div>
   </div>
 
-  <!-- Responsive Task + Due Date inputs -->
+  <!-- Task + Due Date Inputs -->
   <div class="flex flex-col sm:flex-row mb-2 sm:space-x-2 space-y-2 sm:space-y-0">
     <input
       id="taskInput"
       type="text"
-      placeholder="New task…"
+      placeholder="Add a new task..."
       class="w-full sm:flex-grow border rounded p-2 focus:outline-none focus:ring"
       disabled
     />
@@ -44,7 +44,7 @@
       class="w-full sm:w-auto bg-blue-500 text-white px-4 py-2 rounded focus:outline-none focus:ring"
       disabled
     >
-      Add
+      Add Task
     </button>
   </div>
 
@@ -54,7 +54,7 @@
   <!-- Task list -->
   <ul id="tasks" class="space-y-2 mb-6"></ul>
 
-  <!-- Toast container -->
+  <!-- Toasts -->
   <div id="toastContainer" class="fixed bottom-4 right-4 space-y-2 z-50"></div>
 </div>
 
@@ -64,7 +64,7 @@
   class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50"
 >
   <div class="bg-white p-6 rounded shadow-lg w-80 space-y-4">
-    <h2 class="text-xl font-semibold mb-2">Edit Task</h2>
+    <h2 class="text-xl font-semibold mb-2">Update Task</h2>
     <input
       id="editInput"
       type="text"
@@ -77,7 +77,7 @@
     />
     <div class="flex justify-end space-x-2">
       <button id="cancelEdit" class="px-3 py-1 bg-gray-300 rounded focus:outline-none focus:ring">Cancel</button>
-      <button id="saveEdit" class="px-3 py-1 bg-blue-500 text-white rounded focus:outline-none focus:ring">Save</button>
+      <button id="saveEdit" class="px-3 py-1 bg-blue-500 text-white rounded focus:outline-none focus:ring">Update</button>
     </div>
   </div>
 </div>

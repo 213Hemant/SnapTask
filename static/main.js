@@ -72,7 +72,7 @@ function createTaskElement(task) {
 
   const removeBtn = document.createElement('button');
   removeBtn.className = 'remove-btn text-red-500';
-  removeBtn.textContent = '✕';
+  removeBtn.textContent = 'Remove';
   topRow.appendChild(removeBtn);
 
   li.appendChild(topRow);
@@ -81,7 +81,7 @@ function createTaskElement(task) {
   if (task.due_date) {
     const due = document.createElement('div');
     due.className = 'text-xs text-gray-600 mt-1';
-    due.textContent = `Due: ${task.due_date}`;
+    due.textContent = `Due by: ${task.due_date}`;
     li.appendChild(due);
   }
 
@@ -89,7 +89,7 @@ function createTaskElement(task) {
   const meta = document.createElement('div');
   meta.className = 'text-xs text-gray-500 mt-1';
   if (task.last_modified_by && task.last_modified_by !== task.created_by) {
-    meta.textContent = `Created by ${task.created_by}, last edited by ${task.last_modified_by}`;
+    meta.textContent = `Created by ${task.created_by}, last updated by ${task.last_modified_by}`;
   } else {
     meta.textContent = `Created by ${task.created_by}`;
   }
@@ -233,7 +233,7 @@ socket.on('task_edited', ({ id, text, due_date }) => {
       dueEl.className = 'text-xs text-gray-600 mt-1';
       el.appendChild(dueEl);
     }
-    dueEl.textContent = `Due: ${due_date}`;
+    dueEl.textContent = `Due by: ${due_date}`;
   } else if (dueEl) {
     dueEl.remove();
   }
@@ -244,7 +244,7 @@ socket.on('task_edited', ({ id, text, due_date }) => {
 
 // Notifications
 socket.on('notification', ({ message, username }) =>
-  showToast(`${username || 'Someone'}: ${message}`)
+  showToast(`${username || 'Someone'} says: ${message}`)
 );
 
 // Typing indicators
