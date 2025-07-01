@@ -10,16 +10,36 @@
 
   <style>
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to   { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
+
     .animate-fade-in {
       animation: fadeIn 0.3s ease-out;
     }
+
     .animate-fade-in-out {
       transition: opacity 0.7s ease;
     }
+
+    body {
+      font-family: "Rubik", sans-serif;
+      font-optical-sizing: auto;
+      font-weight: 400;
+      font-style: normal;
+    }
   </style>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&display=swap" rel="stylesheet">
 </head>
 
 <body class="bg-gray-100 min-h-screen flex flex-col">
@@ -31,9 +51,32 @@
 
   <!-- Navbar -->
   <nav role="banner" class="bg-white shadow mb-6">
-    <div class="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
       <a href="{{ url_for('landing') }}" class="text-xl font-bold">SnapTask</a>
-      <div class="space-x-4">
+      
+      <!-- Mobile toggle -->
+      <button id="navToggle" class="sm:hidden text-gray-600 focus:outline-none focus:ring" aria-label="Toggle navigation">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      <!-- Links -->
+      <div id="navLinks" class="hidden sm:flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm">
+        {% if current_user.is_authenticated %}
+          <a href="{{ url_for('index') }}" class="hover:underline focus:outline-none focus:ring">Dashboard</a>
+          <a href="{{ url_for('room.rooms') }}" class="hover:underline focus:outline-none focus:ring">Rooms</a>
+          <a href="{{ url_for('auth.logout') }}" class="text-red-500 hover:underline focus:outline-none focus:ring">Sign Out</a>
+        {% else %}
+          <a href="{{ url_for('auth.login') }}" class="hover:underline focus:outline-none focus:ring">Log In</a>
+          <a href="{{ url_for('auth.signup') }}" class="hover:underline focus:outline-none focus:ring">Create Account</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Mobile dropdown -->
+    <div id="navDropdown" class="sm:hidden px-4 pb-3 hidden">
+      <div class="flex flex-col gap-2 text-sm">
         {% if current_user.is_authenticated %}
           <a href="{{ url_for('index') }}" class="hover:underline focus:outline-none focus:ring">Dashboard</a>
           <a href="{{ url_for('room.rooms') }}" class="hover:underline focus:outline-none focus:ring">Rooms</a>
@@ -47,7 +90,7 @@
   </nav>
 
   <!-- Main -->
-  <main id="main-content" role="main" class="flex-grow">
+  <main id="main-content" role="main" class="flex-grow px-4 sm:px-0">
     {% block content %}{% endblock %}
   </main>
 
@@ -59,6 +102,13 @@
   </footer>
 
   {% block scripts %}{% endblock %}
+  <script>
+    // Simple mobile nav toggle
+    document.getElementById('navToggle')?.addEventListener('click', () => {
+      const dropdown = document.getElementById('navDropdown');
+      dropdown.classList.toggle('hidden');
+    });
+  </script>
 </body>
 
 </html>
