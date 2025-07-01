@@ -1,22 +1,26 @@
 // static/main.js
-const socket = io();
-const roomSelect     = document.getElementById('roomSelect');
-const joinBtn        = document.getElementById('joinBtn');
-const taskInput      = document.getElementById('taskInput');
-const dueDateInput   = document.getElementById('dueDateInput');
-const addBtn         = document.getElementById('addBtn');
-const tasksList      = document.getElementById('tasks');
-const toastContainer = document.getElementById('toastContainer');
-const editModal      = document.getElementById('editModal');
-const editInput      = document.getElementById('editInput');
-const editDueDate    = document.getElementById('editDueDate'); // NEW
-const cancelEdit     = document.getElementById('cancelEdit');
-const saveEdit       = document.getElementById('saveEdit');
 
-let currentRoom = null;
+// Socket & DOM elements
+const socket           = io();
+const roomSelect       = document.getElementById('roomSelect');
+const joinBtn          = document.getElementById('joinBtn');
+const taskInput        = document.getElementById('taskInput');
+const dueDateInput     = document.getElementById('dueDateInput');
+const addBtn           = document.getElementById('addBtn');
+const tasksList        = document.getElementById('tasks');
+const toastContainer   = document.getElementById('toastContainer');
+const typingIndicator  = document.getElementById('typingIndicator');
+const editModal        = document.getElementById('editModal');
+const editInput        = document.getElementById('editInput');
+const editDueDate      = document.getElementById('editDueDate');
+const cancelEdit       = document.getElementById('cancelEdit');
+const saveEdit         = document.getElementById('saveEdit');
+
+let currentRoom   = null;
 let editingTaskId = null;
+let typingTimeout = null;
 
-// Show temp toast
+// Utility: show a temporary toast
 function showToast(message) {
   const div = document.createElement('div');
   div.className = 'bg-white p-3 rounded shadow-lg animate-fade-in-out';
@@ -25,12 +29,13 @@ function showToast(message) {
   setTimeout(() => div.remove(), 3000);
 }
 
-// Build a task element
+// Build a task <li> element with due-date and author meta
 function createTaskElement(task) {
   const li = document.createElement('li');
   li.dataset.id = task.id;
   li.className = 'flex flex-col bg-white p-3 rounded shadow';
 
+  // Top row: checkbox, text, remove button
   const topRow = document.createElement('div');
   topRow.className = 'flex items-center justify-between';
 
@@ -47,7 +52,7 @@ function createTaskElement(task) {
   span.textContent = task.text;
   span.classList.add('task-text', 'cursor-pointer');
   if (task.done) span.classList.add('line-through', 'text-gray-500');
-  span.onclick = () => openEditModal(task.id, task.text, task.due_date); // MODIFIED
+  span.onclick = () => openEditModal(task.id, task.text, task.due_date);
   left.appendChild(span);
 
   topRow.appendChild(left);
@@ -59,7 +64,7 @@ function createTaskElement(task) {
 
   li.appendChild(topRow);
 
-  // due date
+  // Due date display
   if (task.due_date) {
     const due = document.createElement('div');
     due.className = 'text-xs text-gray-600 mt-1';
@@ -67,6 +72,7 @@ function createTaskElement(task) {
     li.appendChild(due);
   }
 
+  // Creator / editor metadata
   const meta = document.createElement('div');
   meta.className = 'text-xs text-gray-500 mt-1';
   if (task.last_modified_by && task.last_modified_by !== task.created_by) {
@@ -74,84 +80,94 @@ function createTaskElement(task) {
   } else {
     meta.textContent = `Created by ${task.created_by}`;
   }
-
   li.appendChild(meta);
 
   return li;
 }
 
-// Modal
-function openEditModal(id, text, dueDate) { // MODIFIED
+// Open the edit modal and populate fields
+function openEditModal(id, text, dueDate) {
   editingTaskId = id;
   editInput.value = text;
-  editDueDate.value = dueDate || ''; // MODIFIED
+  editDueDate.value = dueDate || '';
   editModal.classList.remove('hidden');
 }
+
+// Modal button handlers
 cancelEdit.onclick = () => editModal.classList.add('hidden');
-saveEdit.onclick = () => {
+saveEdit.onclick   = () => {
   const newText = editInput.value.trim();
-  const newDue  = editDueDate.value || null; // MODIFIED
+  const newDue  = editDueDate.value || null;
   if (!newText) return;
   socket.emit('edit_task', {
-    room: currentRoom,
-    id: editingTaskId,
-    text: newText,
-    due_date: newDue, // MODIFIED
+    room:     currentRoom,
+    id:       editingTaskId,
+    text:     newText,
+    due_date: newDue,
     username: CURRENT_USER
   });
   editModal.classList.add('hidden');
 };
 
-// Join room
+// Emit typing / stop_typing events
+function emitTyping() {
+  if (!currentRoom) return;
+  socket.emit('typing', { room: currentRoom, username: CURRENT_USER });
+  clearTimeout(typingTimeout);
+  typingTimeout = setTimeout(() => {
+    socket.emit('stop_typing', { room: currentRoom });
+  }, 1500);
+}
+
+// Join a room
 joinBtn.onclick = () => {
   const room = roomSelect.value;
   if (!room) return;
   currentRoom = room;
+  typingIndicator.textContent = '';
   socket.emit('join_room', { room, username: CURRENT_USER });
-  taskInput.disabled = false;
+  taskInput.disabled    = false;
   dueDateInput.disabled = false;
-  addBtn.disabled = false;
-  tasksList.innerHTML = '';
+  addBtn.disabled       = false;
+  tasksList.innerHTML   = '';
 };
 
-// Add task (with due date)
+// Add a new task (with optional due date)
 addBtn.onclick = () => {
   const text = taskInput.value.trim();
   const due  = dueDateInput.value || null;
   if (!text) return;
   socket.emit('add_task', {
-    room: currentRoom,
-    text: text,
+    room:     currentRoom,
+    text:     text,
     due_date: due,
     username: CURRENT_USER
   });
-  taskInput.value = '';
+  taskInput.value    = '';
   dueDateInput.value = '';
 };
 
-// Load tasks (sorted by due date)
+// Socket.IO listeners
+
+// Initial load of tasks (sorted by due date)
 socket.on('room_data', ({ tasks }) => {
-  tasks.sort((a, b) => {
-    if (!a.due_date) return 1;
-    if (!b.due_date) return -1;
-    return new Date(a.due_date) - new Date(b.due_date);
-  });
-  tasks.forEach(t => tasksList.appendChild(createTaskElement(t)));
+  tasksList.innerHTML = '';
+  tasks
+    .sort((a, b) => {
+      if (!a.due_date) return 1;
+      if (!b.due_date) return -1;
+      return new Date(a.due_date) - new Date(b.due_date);
+    })
+    .forEach(t => tasksList.appendChild(createTaskElement(t)));
 });
 
-// Task added
-socket.on('task_added', task =>
-  tasksList.appendChild(createTaskElement(task))
-);
-
-// Task removed
-socket.on('task_removed', ({ id }) => {
+// Task CRUD events
+socket.on('task_added',    task => tasksList.appendChild(createTaskElement(task)));
+socket.on('task_removed',  ({ id }) => {
   const el = tasksList.querySelector(`li[data-id='${id}']`);
   if (el) el.remove();
 });
-
-// Task toggled
-socket.on('task_toggled', ({ id, done }) => {
+socket.on('task_toggled',  ({ id, done }) => {
   const el = tasksList.querySelector(`li[data-id='${id}']`);
   if (!el) return;
   const cb   = el.querySelector('.toggle-done');
@@ -160,14 +176,11 @@ socket.on('task_toggled', ({ id, done }) => {
   span.classList.toggle('line-through', done);
   span.classList.toggle('text-gray-500', done);
 });
-
-// Task edited
-socket.on('task_edited', ({ id, text, due_date }) => {
+socket.on('task_edited',   ({ id, text, due_date }) => {
   const el = tasksList.querySelector(`li[data-id='${id}']`);
   if (!el) return;
   el.querySelector('.task-text').textContent = text;
 
-  // update due date display
   let dueEl = el.querySelector('.text-gray-600');
   if (due_date) {
     if (!dueEl) {
@@ -181,19 +194,19 @@ socket.on('task_edited', ({ id, text, due_date }) => {
   }
 });
 
-// Notification
+// Notifications
 socket.on('notification', ({ message, username }) =>
   showToast(`${username || 'Someone'}: ${message}`)
 );
 
-// Delegate remove/toggle
-tasksList.addEventListener('click', e => {
-  if (!currentRoom) return;
-  if (e.target.matches('.remove-btn')) {
-    const id = +e.target.closest('li').dataset.id;
-    socket.emit('remove_task', { room: currentRoom, id, username: CURRENT_USER });
-  } else if (e.target.matches('.toggle-done')) {
-    const id = +e.target.closest('li').dataset.id;
-    socket.emit('toggle_done', { room: currentRoom, id, username: CURRENT_USER });
-  }
+// Typing indicators
+socket.on('user_typing', ({ username }) => {
+  typingIndicator.textContent = `${username} is typing...`;
 });
+socket.on('user_stop_typing', () => {
+  typingIndicator.textContent = '';
+});
+
+// Attach typing listeners
+taskInput.addEventListener('input', emitTyping);
+dueDateInput.addEventListener('input', emitTyping);

@@ -146,6 +146,22 @@ def handle_edit_task(data):
         'username': current_user.username
     }, room=room_name)
 
+@socketio.on('typing')
+@login_required
+def handle_typing(data):
+    room_name = data['room']
+    authorize_room(room_name)
+    emit('user_typing', {
+        'username': data['username']
+    }, room=room_name, include_self=False)
+
+@socketio.on('stop_typing')
+@login_required
+def handle_stop_typing(data):
+    room_name = data['room']
+    authorize_room(room_name)
+    emit('user_stop_typing', {}, room=room_name, include_self=False)
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
