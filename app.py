@@ -16,8 +16,10 @@ from room import room_bp
 load_dotenv()
 
 app = Flask(__name__)
+# app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'secret!')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+
 
 # Initialize extensions
 db.init_app(app)
@@ -182,4 +184,4 @@ def handle_stop_typing(data):
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    socketio.run(app, debug=True)
+    socketio.run(app)
