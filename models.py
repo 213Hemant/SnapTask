@@ -2,6 +2,7 @@
 from datetime import datetime
 from flask_login import UserMixin
 from extensions import db
+from sqlalchemy import Text
 
 # Association table stays the same...
 room_members = db.Table(
@@ -14,7 +15,9 @@ class User(UserMixin, db.Model):
     __tablename__ = 'user'
     id            = db.Column(db.Integer, primary_key=True)
     username      = db.Column(db.String(80), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
+    # password_hash = db.Column(db.String(128), nullable=False)
+    # increase length to accommodate longer hashes (or use Text)
+    password_hash = db.Column(db.String(256), nullable=False)
     # backref 'rooms' via Room.members
     # backref 'created_tasks' & 'edited_tasks' via Task relationships below
 

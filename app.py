@@ -1,5 +1,3 @@
-# app.py
-
 import os
 from flask import Flask, redirect, render_template, url_for, request
 from flask_socketio import SocketIO, emit, join_room, leave_room
@@ -12,17 +10,21 @@ from models import User, Room, Task
 from authorize import authorize_room
 from auth import auth_bp
 from room import room_bp
+from flask_migrate import Migrate
 
+# Load .env, including DATABASE_URL
 load_dotenv()
 
 app = Flask(__name__)
-# app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'secret!')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+# ← Point SQLAlchemy at Postgres via env var, e.g.
+#    postgresql://user:pass@localhost:5432/snaptask_dev
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-
-# Initialize extensions
+# Init extensions
 db.init_app(app)
+migrate = Migrate(app, db)           # <-- Flask‑Migrate for schema migrations
 login_manager = LoginManager(app)
 login_manager.login_view = 'auth.login'
 socketio = SocketIO(app)
@@ -32,28 +34,28 @@ socketio = SocketIO(app)
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# Blueprints
+# Register blueprints
 app.register_blueprint(auth_bp)
 app.register_blueprint(room_bp)
 
-# Context processor for footer
+# Inject current year into all templates
 @app.context_processor
 def inject_current_year():
     return {'current_year': datetime.now(timezone.utc).year}
 
-# Landing page (unauthenticated)
+# Public landing
 @app.route('/welcome')
 def landing():
     return render_template('landing.html')
 
-# Root redirect: unauthenticated → landing; authenticated → index
+# Root redirect
 @app.route('/')
 def root():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
     return redirect(url_for('landing'))
 
-# Main to-do board
+# Main board
 @app.route('/index')
 @login_required
 def index():
@@ -67,7 +69,7 @@ def index():
         current_username=current_user.username
     )
 
-# Socket.IO event handlers
+# ————— Socket.IO Events —————
 
 @socketio.on('join_room')
 @login_required
@@ -150,8 +152,7 @@ def handle_edit_task(data):
 
     task = Task.query.get_or_404(t_id)
     task.text = new_text
-    task.due_date = (datetime.fromisoformat(due_iso).date()
-                     if due_iso else None)
+    task.due_date = datetime.fromisoformat(due_iso).date() if due_iso else None
     task.last_editor = current_user
     db.session.commit()
 
@@ -170,9 +171,8 @@ def handle_edit_task(data):
 def handle_typing(data):
     room_name = data['room']
     authorize_room(room_name)
-    emit('user_typing', {
-        'username': data['username']
-    }, room=room_name, include_self=False)
+    emit('user_typing', {'username': data['username']},
+         room=room_name, include_self=False)
 
 @socketio.on('stop_typing')
 @login_required
@@ -181,7 +181,6 @@ def handle_stop_typing(data):
     authorize_room(room_name)
     emit('user_stop_typing', {}, room=room_name, include_self=False)
 
+# Run the app
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     socketio.run(app)

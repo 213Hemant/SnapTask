@@ -3,7 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Virtual environment
+# Virtual environments
 venv/
 env/
 ENV/
@@ -13,18 +13,21 @@ ENV/
 .vscode/
 .idea/
 
-# Flask stuff
+# Flask-specific
 instance/
 *.db
 *.sqlite3
 
-# Environment variables
+# Environment variables and secrets
 .env
 
-# Frontend build artifacts (if applicable)
+# Frontend build artifacts
 dist/
 node_modules/
 
 # System files
 .DS_Store
 Thumbs.db
+
+# Fly.io deployment files (optional, if you don’t want to commit secrets)
+fly.toml
