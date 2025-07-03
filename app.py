@@ -35,7 +35,8 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 }
 
 # Initialize SQLAlchemy & Flask‑Migrate
-db = SQLAlchemy(app)     # this will call init_app internally
+# db = SQLAlchemy(app)     # this will call init_app internally
+db.init_app(app)
 migrate = Migrate(app, db)
 
 # Initialize the rest of your extensions
