@@ -4,27 +4,41 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_login import LoginManager, login_required, current_user
 from datetime import datetime, timezone
 from dotenv import load_dotenv
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 
-from extensions import db
+from extensions import db  # keep your existing extensions setup
 from models import User, Room, Task
 from authorize import authorize_room
 from auth import auth_bp
 from room import room_bp
-from flask_migrate import Migrate
 
 # Load .env, including DATABASE_URL
 load_dotenv()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'secret!')
-# ← Point SQLAlchemy at Postgres via env var, e.g.
-#    postgresql://user:pass@localhost:5432/snaptask_dev
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Init extensions
-db.init_app(app)
-migrate = Migrate(app, db)           # <-- Flask‑Migrate for schema migrations
+# 1) Grab the raw URL
+database_url = os.getenv('DATABASE_URL', '')
+
+# 2) SQLAlchemy expects "postgresql://" not "postgres://"
+if database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'connect_args': {
+        'sslmode': 'require'
+    }
+}
+
+# Initialize SQLAlchemy & Flask‑Migrate
+db = SQLAlchemy(app)     # this will call init_app internally
+migrate = Migrate(app, db)
+
+# Initialize the rest of your extensions
 login_manager = LoginManager(app)
 login_manager.login_view = 'auth.login'
 socketio = SocketIO(app)
@@ -183,4 +197,5 @@ def handle_stop_typing(data):
 
 # Run the app
 if __name__ == '__main__':
+    # socketio.run(app, debug=True)
     socketio.run(app)
