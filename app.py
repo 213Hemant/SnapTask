@@ -4,10 +4,9 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_login import LoginManager, login_required, current_user
 from datetime import datetime, timezone
 from dotenv import load_dotenv
-from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 
-from extensions import db  # keep your existing extensions setup
+from extensions import db            # ← your single SQLAlchemy instance
 from models import User, Room, Task
 from authorize import authorize_room
 from auth import auth_bp
@@ -19,14 +18,12 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'secret!')
 
-# 1) Grab the raw URL
+# Normalize any "postgres://" to "postgresql://"
 database_url = os.getenv('DATABASE_URL', '')
-
-# 2) SQLAlchemy expects "postgresql://" not "postgres://"
 if database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
-
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'connect_args': {
@@ -34,43 +31,44 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     }
 }
 
-# Initialize SQLAlchemy & Flask‑Migrate
-# db = SQLAlchemy(app)     # this will call init_app internally
-db.init_app(app)
-migrate = Migrate(app, db)
+# ─── Initialize your extensions ───────────────────────────────────────────────
 
-# Initialize the rest of your extensions
+db.init_app(app)                   # initialize the one db instance
+migrate = Migrate(app, db)         # Flask‑Migrate
+
 login_manager = LoginManager(app)
 login_manager.login_view = 'auth.login'
 socketio = SocketIO(app)
 
-# User loader
+# ─── User loader ──────────────────────────────────────────────────────────────
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# Register blueprints
+# ─── Blueprints ───────────────────────────────────────────────────────────────
+
 app.register_blueprint(auth_bp)
 app.register_blueprint(room_bp)
 
-# Inject current year into all templates
+# ─── Context processors ──────────────────────────────────────────────────────
+
 @app.context_processor
 def inject_current_year():
     return {'current_year': datetime.now(timezone.utc).year}
 
-# Public landing
+# ─── Routes ──────────────────────────────────────────────────────────────────
+
 @app.route('/welcome')
 def landing():
     return render_template('landing.html')
 
-# Root redirect
 @app.route('/')
 def root():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
     return redirect(url_for('landing'))
 
-# Main board
 @app.route('/index')
 @login_required
 def index():
@@ -84,7 +82,7 @@ def index():
         current_username=current_user.username
     )
 
-# ————— Socket.IO Events —————
+# ─── Socket.IO Events ────────────────────────────────────────────────────────
 
 @socketio.on('join_room')
 @login_required
@@ -196,7 +194,7 @@ def handle_stop_typing(data):
     authorize_room(room_name)
     emit('user_stop_typing', {}, room=room_name, include_self=False)
 
-# Run the app
+# ─── Run the app ─────────────────────────────────────────────────────────────
+
 if __name__ == '__main__':
-    # socketio.run(app, debug=True)
     socketio.run(app)
