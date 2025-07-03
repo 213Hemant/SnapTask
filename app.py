@@ -196,5 +196,13 @@ def handle_stop_typing(data):
 
 # ─── Run the app ─────────────────────────────────────────────────────────────
 
+# At the bottom of app.py, just above socketio.run(app)
 if __name__ == '__main__':
-    socketio.run(app)
+    # This will create all tables (users, rooms, tasks, room_members) 
+    # if they don't already exist.
+    with app.app_context():
+        db.drop_all()
+        # db.create_all()
+        db.create_all()
+
+    socketio.run(app,debug=True)
