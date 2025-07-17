@@ -1,3 +1,7 @@
+import eventlet
+eventlet.monkey_patch()
+
+
 import os
 from flask import Flask, redirect, render_template, url_for, request
 from flask_socketio import SocketIO, emit, join_room, leave_room
@@ -38,7 +42,8 @@ migrate = Migrate(app, db)         # Flask‑Migrate
 
 login_manager = LoginManager(app)
 login_manager.login_view = 'auth.login'
-socketio = SocketIO(app)
+# socketio = SocketIO(app)
+socketio = SocketIO(app, async_mode="eventlet")
 
 # ─── User loader ──────────────────────────────────────────────────────────────
 
@@ -205,4 +210,4 @@ if __name__ == '__main__':
         # db.create_all()
         db.create_all()
 
-    socketio.run(app,debug=False)
+    socketio.run(app,debug=True)
