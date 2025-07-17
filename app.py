@@ -1,3 +1,6 @@
+import eventlet
+eventlet.monkey_patch()
+
 import os
 from flask import Flask, redirect, render_template, url_for, request
 from flask_socketio import SocketIO, emit, join_room, leave_room
@@ -201,8 +204,8 @@ def handle_stop_typing(data):
 if __name__ == '__main__':
     # This will create all tables (users, rooms, tasks, room_members) 
     # if they don't already exist.
-    import eventlet
-    eventlet.monkey_patch()
+    # import eventlet
+    # eventlet.monkey_patch()
     with app.app_context():
         db.drop_all()
         # db.create_all()
