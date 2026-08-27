@@ -4,6 +4,9 @@ SnapTask is a real-time collaborative task management web app built with **Flask
 
 Users can create shared workspaces, collaborate on tasks in real time, set deadlines, and track task changes.
 
+> ⚠️ **Note:** The live database instance (Aiven PostgreSQL) has expired due to free-tier inactivity limits, but the complete source code and system design are fully functional and available below.
+
+
 ## ✨ Features
 
 - 🔐 User authentication
