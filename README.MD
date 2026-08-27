@@ -1,47 +1,97 @@
-# 🧠 SnapTask — Real-time Collaborative Task Manager
+# 🧠 SnapTask — Real-Time Collaborative Task Manager
 
-Welcome to **SnapTask**, a real-time task collaboration app built using **Flask** and **Socket.IO**. It allows users to create shared workspaces (rooms), add and edit tasks collaboratively, and manage deadlines — all in real time ⚡
+SnapTask is a real-time collaborative task management web app built with **Flask, Socket.IO, SQLAlchemy, and TailwindCSS**.
 
----
+Users can create shared workspaces, collaborate on tasks in real time, set deadlines, and track task changes.
 
-## 🚀 Features
+## ✨ Features
 
-- 🔐 **Authentication**: Sign up and log in securely
-- 🏠 **Rooms**: Create and manage shared task rooms
-- 📋 **Tasks**: Add, edit, and remove tasks collaboratively
-- 🕒 **Due Dates**: Assign deadlines to your tasks
-- 💬 **Live Sync**: See updates in real time via WebSockets
-- 📱 **Responsive UI**: TailwindCSS-powered design that looks great on all screens
-
----
+- 🔐 User authentication
+- 🏠 Shared workspaces with membership-based access
+- 📋 Create, edit, complete, and delete tasks
+- 🕒 Task due dates
+- ⚡ Real-time updates with Socket.IO
+- 👤 Creator and last-editor tracking
+- ⌨️ Live typing indicators
+- 🔔 Real-time activity notifications
+- 📱 Responsive UI
 
 ## 🛠 Tech Stack
 
-**Backend**:
-- 🐍 [Flask]
-- 🌐 [Flask-SocketIO](https://flask-socketio.readthedocs.io/)
-- 🔒 Flask-Login for user authentication
+**Backend:** Python, Flask, SQLAlchemy, Flask-Login, Flask-SocketIO, Flask-Migrate
 
-**Frontend**:
-- 🎨 [Tailwind CSS](https://tailwindcss.com/)
-- 🧠 Vanilla JavaScript for real-time updates
-- 🔌 Socket.IO (client-side) for live communication
+**Frontend:** HTML, TailwindCSS, Vanilla JavaScript, Socket.IO Client
 
----
+**Database:** SQLite / PostgreSQL
 
-## 📦 Installation
+**Deployment:** Gunicorn + Eventlet
+
+## 📸 Screenshots
+
+### Landing
+![Landing](snaptaskimages/1.jfif)
+
+### Login
+![Login](snaptaskimages/2.jfif)
+
+### Workspace Management
+![Workspaces](snaptaskimages/3.jfif)
+
+### Task Collaboration
+![Tasks](snaptaskimages/5.jfif)
+
+
+## 🚀 Run Locally
 
 ```bash
-# 1. Clone the repo
-git clone https://github.com/your-username/snaptask.git
-cd snaptask
+git clone <YOUR_GITHUB_REPOSITORY_URL>
+cd SnapTask
 
-# 2. Create a virtual environment and activate it
 python -m venv venv
-source venv/bin/activate  # or venv\Scripts\activate on Windows
+venv\Scripts\activate       # Windows
+# source venv/bin/activate  # macOS/Linux
 
-# 3. Install dependencies
 pip install -r requirements.txt
+npm install
+npm run build:css
 
-# 4. Run the app
+flask db upgrade
 python app.py
+````
+
+Create a `.env` file:
+
+```env
+SECRET_KEY=your-secret-key
+DATABASE_URL=your-database-url
+```
+
+## 📁 Project Structure
+
+```text
+SnapTask/
+├── migrations/
+├── static/
+├── templates/
+├── snaptaskimages/
+├── app.py
+├── auth.py
+├── authorize.py
+├── models.py
+├── room.py
+├── extensions.py
+└── README.md
+```
+
+## 🔮 Future Improvements
+
+* Workspace invitation/acceptance system
+* Task priorities and tags
+* Search and filtering
+* Activity history
+* Automated tests
+* Email notifications
+
+## 👨‍💻 By Author
+
+Built as a full-stack collaborative application to explore **real-time communication, authentication, relational data modeling, and WebSocket-based collaboration**.

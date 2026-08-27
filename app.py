@@ -2,114 +2,189 @@ import eventlet
 eventlet.monkey_patch()
 
 import os
-from flask import Flask, redirect, render_template, url_for, request
-from flask_socketio import SocketIO, emit, join_room, leave_room
-from flask_login import LoginManager, login_required, current_user
 from datetime import datetime, timezone
-from dotenv import load_dotenv
-from flask_migrate import Migrate
 
-from extensions import db            # ← your single SQLAlchemy instance
+from dotenv import load_dotenv
+from flask import Flask, redirect, render_template, url_for, request
+from flask_login import LoginManager, login_required, current_user
+from flask_migrate import Migrate
+from flask_socketio import SocketIO, emit, join_room
+
+from extensions import db
 from models import User, Room, Task
-from authorize import authorize_room
+from authorize import authorize_room, authorize_task
 from auth import auth_bp
 from room import room_bp
 
-# Load .env, including DATABASE_URL
+
+# ─────────────────────────────────────────────────────────────
+# Configuration
+# ─────────────────────────────────────────────────────────────
+
 load_dotenv()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'secret!')
 
-# Normalize any "postgres://" to "postgresql://"
-database_url = os.getenv('DATABASE_URL', '')
-if database_url.startswith('postgres://'):
-    database_url = database_url.replace('postgres://', 'postgresql://', 1)
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-key")
 
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'connect_args': {
-        'sslmode': 'require'
+database_url = os.getenv("DATABASE_URL", "")
+
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# Only require SSL for PostgreSQL.
+if database_url.startswith("postgresql://"):
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "connect_args": {
+            "sslmode": "require"
+        }
     }
-}
 
-# ─── Initialize your extensions ───────────────────────────────────────────────
 
-db.init_app(app)                   # initialize the one db instance
-migrate = Migrate(app, db)         # Flask‑Migrate
+# ─────────────────────────────────────────────────────────────
+# Extensions
+# ─────────────────────────────────────────────────────────────
+
+db.init_app(app)
+
+migrate = Migrate(app, db)
 
 login_manager = LoginManager(app)
-login_manager.login_view = 'auth.login'
-# socketio = SocketIO(app)
-socketio = SocketIO(app, async_mode="eventlet")
+login_manager.login_view = "auth.login"
 
-# ─── User loader ──────────────────────────────────────────────────────────────
+socketio = SocketIO(
+    app,
+    async_mode="eventlet"
+)
+
+
+# ─────────────────────────────────────────────────────────────
+# Authentication
+# ─────────────────────────────────────────────────────────────
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return db.session.get(User, int(user_id))
 
-# ─── Blueprints ───────────────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────
+# Blueprints
+# ─────────────────────────────────────────────────────────────
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(room_bp)
 
-# ─── Context processors ──────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────
+# Context processors
+# ─────────────────────────────────────────────────────────────
 
 @app.context_processor
 def inject_current_year():
-    return {'current_year': datetime.now(timezone.utc).year}
+    return {
+        "current_year": datetime.now(timezone.utc).year
+    }
 
-# ─── Routes ──────────────────────────────────────────────────────────────────
 
-@app.route('/welcome')
+# ─────────────────────────────────────────────────────────────
+# Routes
+# ─────────────────────────────────────────────────────────────
+
+@app.route("/welcome")
 def landing():
-    return render_template('landing.html')
+    return render_template("landing.html")
 
-@app.route('/')
+
+@app.route("/")
 def root():
     if current_user.is_authenticated:
-        return redirect(url_for('index'))
-    return redirect(url_for('landing'))
+        return redirect(url_for("index"))
 
-@app.route('/index')
+    return redirect(url_for("landing"))
+
+
+@app.route("/index")
 @login_required
 def index():
-    try:
-        rooms = current_user.rooms.all()
-    except AttributeError:
-        rooms = current_user.rooms
+    rooms = current_user.rooms.all()
+
     return render_template(
-        'index.html',
+        "index.html",
         rooms=rooms,
         current_username=current_user.username
     )
 
-# ─── Socket.IO Events ────────────────────────────────────────────────────────
 
-@socketio.on('join_room')
+# ─────────────────────────────────────────────────────────────
+# Socket.IO Events
+# ─────────────────────────────────────────────────────────────
+
+@socketio.on("join_room")
 @login_required
 def handle_join(data):
-    room_name = data['room']
-    room = authorize_room(room_name)
-    join_room(room_name)
-    tasks_list = [t.to_dict() for t in room.tasks]
-    tasks_list.sort(key=lambda x: (x['due_date'] is None, x['due_date']))
-    emit('room_data', {'tasks': tasks_list}, room=request.sid)
-    emit('notification', {
-        'message': f"{current_user.username} joined room '{room_name}'",
-        'username': current_user.username
-    }, room=room_name)
+    room_name = data.get("room")
 
-@socketio.on('add_task')
+    if not room_name:
+        return
+
+    room = authorize_room(room_name)
+
+    join_room(room_name)
+
+    tasks_list = [
+        task.to_dict()
+        for task in room.tasks
+    ]
+
+    tasks_list.sort(
+        key=lambda task: (
+            task["due_date"] is None,
+            task["due_date"]
+        )
+    )
+
+    emit(
+        "room_data",
+        {"tasks": tasks_list},
+        room=request.sid
+    )
+
+    emit(
+        "notification",
+        {
+            "message": (
+                f"{current_user.username} "
+                f"joined room '{room_name}'"
+            ),
+            "username": current_user.username
+        },
+        room=room_name
+    )
+
+
+@socketio.on("add_task")
 @login_required
 def handle_add_task(data):
-    room_name = data['room']
-    text = data['text']
-    due_iso = data.get('due_date')
+    room_name = data.get("room")
+    text = (data.get("text") or "").strip()
+    due_iso = data.get("due_date")
+
+    if not room_name or not text:
+        return
+
     room = authorize_room(room_name)
-    due = datetime.fromisoformat(due_iso).date() if due_iso else None
+
+    try:
+        due = (
+            datetime.fromisoformat(due_iso).date()
+            if due_iso
+            else None
+        )
+    except ValueError:
+        return
 
     new_task = Task(
         text=text,
@@ -119,96 +194,227 @@ def handle_add_task(data):
         creator=current_user,
         last_editor=current_user
     )
+
     db.session.add(new_task)
     db.session.commit()
 
-    emit('task_added', new_task.to_dict(), room=room_name)
-    emit('notification', {
-        'message': f"{current_user.username} added: '{text}'",
-        'username': current_user.username
-    }, room=room_name)
+    emit(
+        "task_added",
+        new_task.to_dict(),
+        room=room_name
+    )
 
-@socketio.on('remove_task')
+    emit(
+        "notification",
+        {
+            "message": (
+                f"{current_user.username} "
+                f"added: '{text}'"
+            ),
+            "username": current_user.username
+        },
+        room=room_name
+    )
+
+
+@socketio.on("remove_task")
 @login_required
 def handle_remove_task(data):
-    room_name, t_id = data['room'], data['id']
-    authorize_room(room_name)
-    task = Task.query.get_or_404(t_id)
+    room_name = data.get("room")
+    task_id = data.get("id")
+
+    if not room_name or not task_id:
+        return
+
+    room = authorize_room(room_name)
+
+    task = db.session.get(Task, task_id)
+
+    if not task:
+        return
+
+    # Critical authorization check:
+    # task must actually belong to the selected room.
+    authorize_task(task, room)
+
     db.session.delete(task)
     db.session.commit()
-    emit('task_removed', {'id': t_id}, room=room_name)
-    emit('notification', {
-        'message': f"{current_user.username} removed task {t_id}",
-        'username': current_user.username
-    }, room=room_name)
 
-@socketio.on('toggle_done')
+    emit(
+        "task_removed",
+        {"id": task_id},
+        room=room_name
+    )
+
+    emit(
+        "notification",
+        {
+            "message": (
+                f"{current_user.username} "
+                f"removed task {task_id}"
+            ),
+            "username": current_user.username
+        },
+        room=room_name
+    )
+
+
+@socketio.on("toggle_done")
 @login_required
 def handle_toggle_done(data):
-    room_name, t_id = data['room'], data['id']
-    authorize_room(room_name)
-    task = Task.query.get_or_404(t_id)
+    room_name = data.get("room")
+    task_id = data.get("id")
+
+    if not room_name or not task_id:
+        return
+
+    room = authorize_room(room_name)
+
+    task = db.session.get(Task, task_id)
+
+    if not task:
+        return
+
+    # Critical authorization check.
+    authorize_task(task, room)
+
     task.done = not task.done
     task.last_editor = current_user
-    db.session.commit()
-    emit('task_toggled', {'id': t_id, 'done': task.done}, room=room_name)
-    state = 'completed' if task.done else 'reopened'
-    emit('notification', {
-        'message': f"{current_user.username} {state} '{task.text}'",
-        'username': current_user.username
-    }, room=room_name)
 
-@socketio.on('edit_task')
+    db.session.commit()
+
+    emit(
+        "task_toggled",
+        {
+            "id": task.id,
+            "done": task.done
+        },
+        room=room_name
+    )
+
+    state = "completed" if task.done else "reopened"
+
+    emit(
+        "notification",
+        {
+            "message": (
+                f"{current_user.username} "
+                f"{state} '{task.text}'"
+            ),
+            "username": current_user.username
+        },
+        room=room_name
+    )
+
+
+@socketio.on("edit_task")
 @login_required
 def handle_edit_task(data):
-    room_name = data['room']
-    t_id = data['id']
-    new_text = data['text']
-    due_iso = data.get('due_date')
-    authorize_room(room_name)
+    room_name = data.get("room")
+    task_id = data.get("id")
+    new_text = (data.get("text") or "").strip()
+    due_iso = data.get("due_date")
 
-    task = Task.query.get_or_404(t_id)
+    if not room_name or not task_id or not new_text:
+        return
+
+    room = authorize_room(room_name)
+
+    task = db.session.get(Task, task_id)
+
+    if not task:
+        return
+
+    # Critical authorization check.
+    authorize_task(task, room)
+
+    try:
+        due = (
+            datetime.fromisoformat(due_iso).date()
+            if due_iso
+            else None
+        )
+    except ValueError:
+        return
+
     task.text = new_text
-    task.due_date = datetime.fromisoformat(due_iso).date() if due_iso else None
+    task.due_date = due
     task.last_editor = current_user
+
     db.session.commit()
 
-    emit('task_edited', {
-        'id': t_id,
-        'text': new_text,
-        'due_date': task.due_date.isoformat() if task.due_date else None
-    }, room=room_name)
-    emit('notification', {
-        'message': f"{current_user.username} edited: '{new_text}'",
-        'username': current_user.username
-    }, room=room_name)
+    emit(
+        "task_edited",
+        {
+            "id": task.id,
+            "text": task.text,
+            "due_date": (
+                task.due_date.isoformat()
+                if task.due_date
+                else None
+            )
+        },
+        room=room_name
+    )
 
-@socketio.on('typing')
+    emit(
+        "notification",
+        {
+            "message": (
+                f"{current_user.username} "
+                f"edited: '{new_text}'"
+            ),
+            "username": current_user.username
+        },
+        room=room_name
+    )
+
+
+@socketio.on("typing")
 @login_required
 def handle_typing(data):
-    room_name = data['room']
-    authorize_room(room_name)
-    emit('user_typing', {'username': data['username']},
-         room=room_name, include_self=False)
+    room_name = data.get("room")
 
-@socketio.on('stop_typing')
+    if not room_name:
+        return
+
+    authorize_room(room_name)
+
+    # Never trust username supplied by the browser.
+    emit(
+        "user_typing",
+        {
+            "username": current_user.username
+        },
+        room=room_name,
+        include_self=False
+    )
+
+
+@socketio.on("stop_typing")
 @login_required
 def handle_stop_typing(data):
-    room_name = data['room']
+    room_name = data.get("room")
+
+    if not room_name:
+        return
+
     authorize_room(room_name)
-    emit('user_stop_typing', {}, room=room_name, include_self=False)
 
-# ─── Run the app ─────────────────────────────────────────────────────────────
+    emit(
+        "user_stop_typing",
+        {},
+        room=room_name,
+        include_self=False
+    )
 
-# At the bottom of app.py, just above socketio.run(app)
-if __name__ == '__main__':
-    # This will create all tables (users, rooms, tasks, room_members) 
-    # if they don't already exist.
-    # import eventlet
-    # eventlet.monkey_patch()
-    with app.app_context():
-        db.drop_all()
-        # db.create_all()
-        db.create_all()
 
-    socketio.run(app,debug=False)
+# ─────────────────────────────────────────────────────────────
+# Run locally
+# ─────────────────────────────────────────────────────────────
+
+if __name__ == "__main__":
+    socketio.run(
+        app,
+        debug=False
+    )
